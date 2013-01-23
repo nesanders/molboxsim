@@ -7,6 +7,7 @@ Very simple molecular dynamics simulation.
 
 * Molecules seem to bunch up at the position 0,0 over time
 * Coordinate transformation for the overplotted png image is very kludgy.
+* Evaporation is not quite implemented yet
 
 ## Errata ##
 
