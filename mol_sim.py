@@ -1,9 +1,37 @@
 import matplotlib.image as image
+import os,pdb,sys
 from pylab import *
 from numpy import *
 from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 from matplotlib.collections import PolyCollection
 from mpl_toolkits.mplot3d import proj3d
+
+
+
+## Options
+#prefix: Prefix for output files
+#Tinc: Factor by which to increase temperature over the simulation duration
+#liquid: Liquid rather than gas?  (confine to bottom half)
+#imageSize: Image size (e.g. '7,5')
+#collisions: Turn on elastic collisions?
+
+
+if len(sys.argv)>1:  prefix=sys.argv[1]
+else: prefix='liquid/'
+
+if len(sys.argv)>2:  Tinc=float(sys.argv[2])
+else: Tinc=1
+
+if len(sys.argv)>3:  liquid=int(sys.argv[3])
+else: liquid=1
+
+if len(sys.argv)>4:  imageSize=(float(sys.argv[4].split(',')[0]),float(sys.argv[4].split(',')[1]))
+else: imageSize=(8,4.5)
+
+if len(sys.argv)>5:  collisions=int(sys.argv[5])
+else: collisions=1
+
+
 
 ## Maxwell-Boltzmann distribution
 kB=1.380648e-23 #J/K
@@ -32,12 +60,6 @@ bs=5e-1 #box size, meters
 ps=3e-2 # particle size, meters
 ts=1e-5 #timestep, s
 
-
-## Options
-collisions=1
-liquid=1
-prefix='liquid/'
-imageSize=(8,4.5)
 
 if liquid: bounds=[bs,bs,bs/2.]
 else: bounds=[bs,bs,bs]
@@ -85,6 +107,7 @@ xmax, ymax, zmax = proj3d.proj_transform(0,0,0, ax.get_proj())
 im_mod = image.imread('water_mol_s.png')
 im_molly = image.imread('Molly1_sm.png')
 
+os.system('rm '+prefix+'sim*.png')
 
 #Simulate
 for n in range(1000):
@@ -112,13 +135,16 @@ for n in range(1000):
             v1f=v[i,l]+v[i,m]-v2f
             v[i,l]=v2f
             v[i,m]=v1f
+  #Increase temerpature?
+  v=v*(1+sqrt(Tinc/5)/N)
+  #Remake plot
   ax.cla()
   line=ax.scatter(p[0,1:],p[1,1:],p[2,1:],edgecolors='none',s=(imageSize[1]*72*ps/bs)**2)
   
   if liquid: draw_l_surf()
   
   # Plot Molly
-  x2, y2, z2 = proj3d.proj_transform(p[0,0]-ps*5,p[1,0]-ps*5,p[2,0]-ps*5, ax.get_proj())
+  x2, y2, z2 = proj3d.proj_transform(p[0,0]*.7,p[1,0]*.7,p[2,0]*.7, ax.get_proj())
   x3,y3=ax.transData.transform((x2, y2))  # convert 2d space to screen space
   im = OffsetImage(im_molly, zoom=0.5)
   ab = AnnotationBbox(im, (x2,y2), xycoords='data', frameon=False)
@@ -130,4 +156,6 @@ for n in range(1000):
   plt.show()
   plt.savefig(prefix+'sim'+str(n).zfill(4)+'.png',dpi=160)
 
+
+os.system('convert -delay 5 -loop 0  -limit memory 256mb -limit map 256mb '+prefix+'sim*.png '+prefix+'animate_sim.mpg')
 
