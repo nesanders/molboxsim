@@ -16,6 +16,10 @@ from mpl_toolkits.mplot3d import proj3d
 #imageSize: Image size (e.g. '7,5')
 #collisions: Turn on elastic collisions?
 #Nf: Nubmer of frames to render
+#bps: Ratio of box size to particle size
+#N: Number of molecules
+#bfac: Bounceback factor for molecules that reach the edge of the box
+#paclph: alpha channel value for rendering particles
 
 
 if len(sys.argv)>1:  prefix=sys.argv[1]
@@ -42,6 +46,17 @@ else: evaporate=0
 if len(sys.argv)>8:  Nf=int(sys.argv[8])
 else: Nf=1000
 
+if len(sys.argv)>9:  bps=float(sys.argv[9])
+else: bps=0.5/0.003
+
+if len(sys.argv)>10:  N=int(sys.argv[10])
+else: N=200
+
+if len(sys.argv)>11:  bfac=float(sys.argv[11])
+else: bfac=3
+
+if len(sys.argv)>12:  palph=float(sys.argv[12])
+else: palph=1
 
 ## Maxwell-Boltzmann distribution
 kB=1.380648e-23 #J/K
@@ -64,9 +79,9 @@ getdist=lambda p,q: ((p[0]-q[0])**2+(p[1]-q[1])**2+(p[1]-q[1])**2)**.5
 #ts=1e-5 #timestep, s
 
 ## Initial conditions - liquid
-N=200 #Number of molecules
+#N=200 #Number of molecules
 bs=5e-1 #box size, meters
-ps=3e-2 # particle size, meters
+ps=bs/bps# 3e-2 # particle size, meters
 ts=1e-5 #timestep, s
 
 
@@ -134,8 +149,8 @@ for n in range(Nf):
     v[i][hit_in]=-v[i][hit_in]
     v[i][hit_out]=-v[i][hit_out]
     #Move hits back into box
-    p[i][hit_in]=zeros(len(hit_in))+ps*random.uniform(1,3,len(hit_in)) #give it a little push away from the corner
-    p[i][hit_out]=ones(len(hit_out))*bounds[i]-ps*random.uniform(1,3,len(hit_out))
+    p[i][hit_in]=zeros(len(hit_in))+ps*random.uniform(bfac,3*bfac,len(hit_in)) #give it a little push away from the corner
+    p[i][hit_out]=ones(len(hit_out))*bounds[i]-ps*random.uniform(bfac,3*bfac,len(hit_out))
   #Search for colliding particles
   if collisions:
     for l in range(N):
@@ -151,7 +166,7 @@ for n in range(Nf):
   v=v*(1+sqrt(Tinc)/Nf)
   #Remake plot
   ax.cla()
-  line=ax.scatter(p[0,1:],p[1,1:],p[2,1:],edgecolors='none',s=(imageSize[1]*72*ps/bs)**2)
+  line=ax.scatter(p[0,1:],p[1,1:],p[2,1:],edgecolors='none',s=(imageSize[1]*72*ps/bs)**2,alpha=palph)
   
   if liquid: draw_l_surf()
   
@@ -169,5 +184,5 @@ for n in range(Nf):
   plt.savefig(prefix+'sim'+str(n).zfill(4)+'.png',dpi=160)
 
 
-os.system('convert -delay 5 -loop 0  -limit memory 256mb -limit map 256mb '+prefix+'sim*.png '+prefix+'animate_sim.mpg')
+os.system('convert -delay 5 -loop 0  -limit memory 256mb -limit map 256mb -quality 100 '+prefix+'sim*.png '+prefix+'animate_sim.mp4')
 
